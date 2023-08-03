@@ -7,6 +7,8 @@ using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using UnityEditor;
+using UnityEditor.AddressableAssets;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.Localization;
 using UnityEngine;
 
@@ -16,11 +18,16 @@ namespace Wolffun.CodeGen.MagicString.Editor
 {
     public static class MagicStringGenerator
     {
-        public static void GenerateAddressableKeys(KeyGeneratorConfig config)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="config"></param>
+        /// <param name="groups">groups = null if you want to generate all addressables group</param>
+        public static void GenerateAddressableKeys(KeyGeneratorConfig config, AddressableAssetGroup[] groups = null)
         {
             try
             {
-                Write(GetAddressableKeyGroups(), config);
+                Write(GetAddressableKeyGroups(groups), config);
             }
             catch (Exception e)
             {
@@ -75,8 +82,8 @@ namespace Wolffun.CodeGen.MagicString.Editor
             {
                 var keys = keyGroup.Value;
                 //regex spaces and special characters excepts underscore
-                var regex = new Regex(@"[^a-zA-Z0-9_]");
-                var className = regex.Replace(keyGroup.Key, string.Empty);
+                var regex = new Regex(@"[^a-zA-Z0-9_ -]");
+                var className = regex.Replace(keyGroup.Key, string.Empty).Replace(" ", "_").Replace("-", "_");
                 //if keyName start with number, add _
                 if (char.IsDigit(className[0]))
                 {
@@ -92,7 +99,7 @@ namespace Wolffun.CodeGen.MagicString.Editor
                 targetClass.Members.Add(localClass);
                 foreach (var key in keys)
                 {
-                    var fieldName = regex.Replace(key, string.Empty);
+                    var fieldName = regex.Replace(key, string.Empty).Replace(" ", "_").Replace("-", "_");
                     if (string.IsNullOrEmpty(fieldName))
                         continue;
                     //if keyName start with number, add _
@@ -150,9 +157,11 @@ namespace Wolffun.CodeGen.MagicString.Editor
             return keyGroups;
         }
 
-        static Dictionary<string, HashSet<string>> GetAddressableKeyGroups()
+        static Dictionary<string, HashSet<string>> GetAddressableKeyGroups(AddressableAssetGroup[] groups = null)
         {
-            var groups = UnityEditor.AddressableAssets.AddressableAssetSettingsDefaultObject.Settings.groups;
+            if(groups == null || groups.Length == 0)
+                groups = AddressableAssetSettingsDefaultObject.Settings.groups.ToArray();
+            //var groups = UnityEditor.AddressableAssets.AddressableAssetSettingsDefaultObject.Settings.groups;
             var keyGroups = new Dictionary<string, HashSet<string>>();
             foreach (var group in groups)
             {
